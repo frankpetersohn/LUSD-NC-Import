@@ -21,16 +21,22 @@ $ncUsers=[];
 
 // Excel-Datei einlesen
 $filename = $argv[1];
-logMsg(' #### Starte Schülerimport mit '.$argv[1].' ####');
+logMsg(' ####### Starte Schülerimport mit '.$argv[1].' #######');
+if(!file_exists($filename)){
+	logMsg('Datei '.$filename.' nicht gefunden');
+	echo 'Datei '.$filename.' nicht gefunden '.PHP_EOL;	
+	exit;
+}
+
 $spreadsheet = IOFactory::load($filename);
 $sheet = $spreadsheet->getActiveSheet();
 $sheetData = $sheet->toArray(null, true, true, true);
 
 
-var_dump($sheetData);
-
+$z=0;
 foreach ($sheetData as $row){
-	if($row["B"] == "Schueler_Vorname")continue;
+	$z++;
+	if($z <= 1)continue;
 	$sus=[];
 	$sus['Vorname']=$row["B"];
 	$sus['Nachname']=$row["A"];
@@ -38,7 +44,7 @@ foreach ($sheetData as $row){
 	$sus['Geschlecht']=$row['D'];
 	$sus['Klasse']=$row['E'];
 	array_push($importUsers,$sus);
-	if(!in_array($row['E'],$importGroups) && $row['E']!=null && $row['E']!="Klassen_Klassenbezeichnung"){
+	if(!in_array($row['E'],$importGroups) && $row['E']!=null ){
 		array_push($importGroups, $row['E']);
 	}
 }
@@ -69,7 +75,7 @@ foreach ($importGroups as $grp){
 
 }
 
-
+$users = \OC::$server->getUserManager()->search('');
 
 // Benutzer ausgeben
 foreach ($users as $user) {
@@ -85,14 +91,14 @@ $schueler = $schuelerGrp->searchUsers('');
 
 	foreach ($schueler as $sus){
 		$name = explode('.', $sus->getUID());
-		if(!susExists($importUsers, $name[0], $name[1])){
+		if(!susExists($importUsers, $name[0], $name[1]) && $sus->isEnabled()){
 			$sus->setEnabled(false);
 			logMsg('User '.$sus->getUID().' wird deaktiviert');
 		}
 
 	}
 }catch (Throwable $e) {
-	logMsg('Fehler beim Deaktivieren von Schülern: '$e);
+	logMsg('Fehler beim Deaktivieren von Schülern: '.$e);
 }
 
 
@@ -108,7 +114,7 @@ foreach ($importUsers as $usr){
 		try{
 			if(!\OC::$server->getUserManager()->userExists($uid)){
 				$user = \OC::$server->getUserManager()->createUser($uid,$pwd);
-				echo 'erstelle '.$uid.'\n';
+				echo 'erstelle '.$uid.PHP_EOL;
 				logMsg('User '.$uid.' mit Passwort '.$pwd.' erstellt');	
 				
 				$grp = \OC::$server->getGroupManager()->get('Schueler');
@@ -124,18 +130,45 @@ foreach ($importUsers as $usr){
 		}
 	
 	}
-	if(!in_array($uid, $ncUsers)){
-		$grps = \OC::$server->getGroupManager()->getUserGroups($uid)
-		foreach ($grps as $grp){
-			if(in_array($grp, $importGroups && $grp != $usr['Klasse'])){
-				$grp->removeUser($uid);
-				logMsg('User '.$uid.' wurde aus der Gruppe '.$grp.' entfernt');
-				$newgrp = \OC::$server->getGroupManager()->get($usr['Klasse']);
-				$newgrp->addUser($user);
-				logMsg('User '.$uid.' wurde der Gruppe '.$usr['Klasse'].' hinzugefügt');	
-			}
-		}
+	
+	//Überprüft die Gruppenzugehörigkeit und korrigiert diese bei Abweichungen
+
+	/**TODO:
+	 * 
+	 */
+	if(\OC::$server->getUserManager()->userExists($uid)){
+		try{
+			$pupil = \OC::$server->getUserManager()->get($uid);
 		
+			$grps = \OC::$server->getGroupManager()->getUserGroups($pupil);
+			$pupilGroups=[];
+		 	foreach ($grps as $grp){
+				array_push($pupilGroups, $grp->getGID());
+		 			
+				if($grp->getGID() == 'Schueler' || $grp->getGID() == $usr['Klasse'])continue;
+			
+				if($grp->getGID() != $usr['Klasse'] ){
+					$grp->removeUser($pupil);
+					logMsg('User '.$uid.' wurde aus der Gruppe '.$grp->getGID() .' entfernt');
+				}
+				
+
+		}
+
+		if(!in_array('Schueler', $pupilGroups)){
+			$grp = \OC::$server->getGroupManager()->get('Schueler');
+			$grp->addUser($pupil);
+			logMsg('User '.$uid.' wurde der Gruppe Schueler hinzugefügt');
+		}
+		if(!in_array($usr['Klasse'], $pupilGroups)){
+			$grp = \OC::$server->getGroupManager()->get($usr['Klasse']);
+			$grp->addUser($pupil);
+			logMsg('User '.$uid.' wurde der Gruppe '.$usr['Klasse'].' hinzugefügt');
+		}
+
+		}catch (Throwable $e) {
+					logMsg('Fehler beim Ändern der Gruppenzugehörigkeit: '.$e);
+				}	
 
 	}
 
@@ -158,7 +191,7 @@ function umlautepas($string){
   $upas = Array("ä" => "ae", "ü" => "ue", "ö" => "oe", "Ä" => "Ae", "Ü" => "Ue", "Ö" => "Oe"); 
   return strtr($string, $upas);
   }
-  
+// Alternative Funktion zum  Erstellen von Passwörtern 
 function makePassword($len){
   $pwd='';
   $words = array(
