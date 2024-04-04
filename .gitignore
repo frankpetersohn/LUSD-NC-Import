@@ -2,4 +2,9 @@
 !.gitignore
 !importSuS.php
 !delGroups.php
+!delDisabledUsers.php
+!disableGroupUsers.php
+!importLuL.php
+!delDisabledUsers.php
+
 

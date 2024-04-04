@@ -1,7 +1,7 @@
 <?php
 
 /**
-Lernendenimport aus der LUSD.   
+Lehrendeimport aus der LUSD.   
 **/
 
 
@@ -14,14 +14,14 @@ require_once __DIR__.'/3rdparty/autoload.php';
 
 use PhpOffice\PhpSpreadsheet\IOFactory;
 
-$importUsers=[]; //User aus dem LUSD-Import
+$importLuL=[]; //User aus dem LUSD-Import
 $importGroups=[]; // Gruppen aus dem LUSD-Import
 $ncGroups=[];
 $ncUsers=[];
 
 // Excel-Datei einlesen
 $filename = $argv[1];
-logMsg(' ####### Starte Schülerimport mit '.$argv[1].' #######');
+logMsg(' ####### Starte Lehrerimport mit '.$argv[1].' #######');
 if(!file_exists($filename)){
 	logMsg('Datei '.$filename.' nicht gefunden');
 	echo 'Datei '.$filename.' nicht gefunden '.PHP_EOL;	
@@ -34,19 +34,45 @@ $sheetData = $sheet->toArray(null, true, true, true);
 
 
 $z=0;
+$spaltenNamen = [];
 foreach ($sheetData as $row){
 	$z++;
-	if($z <= 1)continue;
-	$sus=[];
-	$sus['Vorname']=$row["B"];
-	$sus['Nachname']=$row["A"];
-	$sus['Gebdatum']=$row['C'];
-	$sus['Geschlecht']=$row['D'];
-	$sus['Klasse']=$row['E'];
-	array_push($importUsers,$sus);
-	if(!in_array($row['E'],$importGroups) && $row['E']!=null ){
-		array_push($importGroups, 'Kl_'.$row['E']);
-	}
+	if($z == 1){
+        foreach ($row as $key => $value){
+            $s=[];
+            if($value != '') {
+                $spaltenNamen[$key] = $value;
+            }
+        }
+    }else{
+        $lul=[];
+        foreach ($row as $key => $value){
+            
+            if(($spaltenNamen[$key] == 'Klassenlehrer_Klasse' || $spaltenNamen[$key] == 'Klassenlehrer_Vertreter_Klasse') && $value != ''){
+                $lul['Klassen'][] = $value;
+                if(!in_array('Kl_'.$value, $importGroups) ){
+                    array_push($importGroups, 'Kl_'.$value);
+                }
+            
+            }else{
+                $lul[$spaltenNamen[$key]] = $value;
+            }
+           
+        }
+
+
+         if(lulExists($importLuL, $lul['Vorname'], $lul['Nachname'], $lul['Lehrer_Kuerzel'])){
+            array_push($importLuL[$lul['Lehrer_Kuerzel']]['Klassen'], $lul['Klassen'][0]);
+         }else{
+              $importLuL[$lul['Lehrer_Kuerzel']]=$lul;
+         }
+      
+
+       
+}
+ 
+	
+	
 }
 
 
@@ -60,10 +86,10 @@ foreach ($groups as $group) {
     array_push($ncGroups, $group->getGID());
 }
 
-// Schülergruppe anlegen
-if(!in_Array('Schueler', $ncGroups)){
-	\OC::$server->getGroupManager()->createGroup('Schueler');
-	logMsg('Gruppe Schueler angelegt');
+// Lehrergruppe anlegen
+if(!in_Array('Lehrer', $ncGroups)){
+	\OC::$server->getGroupManager()->createGroup('Lehrer');
+	logMsg('Gruppe Lehrer angelegt');
 }
 
 //Klassengruppen anlegen
@@ -84,30 +110,30 @@ foreach ($users as $user) {
 }
 
 
-//Nicht in der Importdatei enthaltene Schüler deaktivieren
+//Nicht in der Importdatei enthaltene Lehrer deaktivieren
 try{
-$schuelerGrp = \OC::$server->getGroupManager()->get('Schueler');
-$schueler = $schuelerGrp->searchUsers('');
+$lehrerGrp = \OC::$server->getGroupManager()->get('Lehrer');
+$lehrer = $lehrerGrp->searchUsers('');
 
-	foreach ($schueler as $sus){
-		$name = explode('.', $sus->getUID());
-		if(!susExists($importUsers, $name[0], $name[1]) && $sus->isEnabled()){
-			$sus->setEnabled(false);
-			logMsg('User '.$sus->getUID().' wird deaktiviert');
+	foreach ($lehrer as $lul){
+		$name = explode('.', $lul->getUID());
+		if(!lulExists($importLuL, $name[0], $name[1]) && $lul->isEnabled()){
+			$lul->setEnabled(false);
+			logMsg('User '.$lul->getUID().' wird deaktiviert');
 		}
 
 	}
 }catch (Throwable $e) {
-	logMsg('Fehler beim Deaktivieren von Schülern: '.$e);
+	logMsg('Fehler beim Deaktivieren von Lehrern: '.$e);
 }
 
 
-// Neue Schüler anlegen und den Gruppen hinzufügen
-foreach ($importUsers as $usr){
+// Neue Lehrer anlegen und den Gruppen hinzufügen
+foreach ($importLuL as $usr){
 	//$uid = str_replace(' ','-',$usr['Vorname']).'.'.str_replace(' ','-',$usr['Nachname']);
 	$uid = umlautepas($usr['Vorname'].'.'.$usr['Nachname']);
 	
-	$pwd=strtolower(getInitialen(umlautepas($usr['Vorname']))).strtolower(getInitialen(umlautepas($usr['Nachname']))).str_replace('.','',$usr['Gebdatum']);
+	$pwd=strtolower(getInitialen(umlautepas($usr['Vorname']))).strtolower(getInitialen(umlautepas($usr['Nachname']))).str_replace('.','',$usr['Geburtsdatum']);
 		
 	if(!in_array($uid, $ncUsers)){
 	
@@ -117,13 +143,16 @@ foreach ($importUsers as $usr){
 				echo 'erstelle '.$uid.PHP_EOL;
 				logMsg('User '.$uid.' mit Passwort '.$pwd.' erstellt');	
 				
-				$grp = \OC::$server->getGroupManager()->get('Schueler');
+				$grp = \OC::$server->getGroupManager()->get('Lehrer');
 				$grp->addUser($user);
-				logMsg('User '.$uid.' wurde der Gruppe Schueler hinzugefügt');	
+				logMsg('User '.$uid.' wurde der Gruppe Lehrer hinzugefügt');	
 				
-				$grp = \OC::$server->getGroupManager()->get('Kl_'.$usr['Klasse']);
-				$grp->addUser($user);
-				logMsg('User '.$uid.' wurde der Gruppe '.'Kl_'.$usr['Klasse'].' hinzugefügt');	
+				foreach ($usr['Klassen'] as $klasse){
+                    $grp = \OC::$server->getGroupManager()->get('Kl_'.$klasse);
+				    $grp->addUser($user);
+				    logMsg('User '.$uid.' wurde der Gruppe '.'Kl_'.$klasse.' hinzugefügt');	
+                }
+                
 			}
 		}catch (Throwable $e) {
 			logMsg('User '.$uid.' erstellt ist fehlgeschlagen: '.$e);
@@ -133,7 +162,7 @@ foreach ($importUsers as $usr){
 	
 	//Überprüft die Gruppenzugehörigkeit und korrigiert diese bei Abweichungen
 
-	
+	/*
 	if(\OC::$server->getUserManager()->userExists($uid)){
 		try{
 			$pupil = \OC::$server->getUserManager()->get($uid);
@@ -169,13 +198,13 @@ foreach ($importUsers as $usr){
 					logMsg('Fehler beim Ändern der Gruppenzugehörigkeit: '.$e);
 				}	
 
-	}
+	}*/
 
 
 }
 
 
-logMsg(' #### Schülerimport abgeschlossen ####');
+logMsg(' #### Lehrerimport abgeschlossen ####');
 
 
 
@@ -236,10 +265,15 @@ function getInitialen($string) {
 
     return $initialen;
 }
-// Funktion zur Überprüfung, ob ein Schüler im Array existiert
-function susExists($personen, $vorname, $nachname) {
+// Funktion zur Überprüfung, ob ein Lehrer im Array existiert
+function lulExists($personen, $vorname, $nachname, $Lehrer_Kuerzel = null) {
     foreach ($personen as $person) {
-        if ($person['Vorname'] === $vorname && $person['Nachname'] === $nachname) {
+        if ($Lehrer_Kuerzel == null){
+            if ($person['Vorname'] === $vorname && $person['Nachname'] === $nachname) {
+                return true;
+            }
+        }
+        if ($person['Vorname'] === $vorname && $person['Nachname'] === $nachname && $person['Lehrer_Kuerzel'] === $Lehrer_Kuerzel) {
             return true;
         }
     }
