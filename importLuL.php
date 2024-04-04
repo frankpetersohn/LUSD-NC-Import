@@ -5,12 +5,13 @@ Lehrendeimport aus der LUSD.
 **/
 
 
-
 // Pfade zur Nextcloud-Installation und Konfiguration
 require_once __DIR__.'/lib/base.php';
 require_once __DIR__.'/config/config.php';
 require_once __DIR__.'/lib/composer/autoload.php';
 require_once __DIR__.'/3rdparty/autoload.php';
+require_once __DIR__.'/importConfig.php';
+
 
 use PhpOffice\PhpSpreadsheet\IOFactory;
 
@@ -106,7 +107,7 @@ $users = \OC::$server->getUserManager()->search('');
 // Benutzer ausgeben
 foreach ($users as $user) {
 	array_push($ncUsers,$user->getUID());
-   // echo "Benutzer: " . $user->getUID() . "\n";
+   
 }
 
 
@@ -118,6 +119,7 @@ $lehrer = $lehrerGrp->searchUsers('');
 	foreach ($lehrer as $lul){
 		$name = explode('.', $lul->getUID());
 		if(!lulExists($importLuL, $name[0], $name[1]) && $lul->isEnabled()){
+        //if(!array_key_exists($lul->getUID(), $importLuL) && $lul->isEnabled()){
 			$lul->setEnabled(false);
 			logMsg('User '.$lul->getUID().' wird deaktiviert');
 		}
@@ -131,16 +133,19 @@ $lehrer = $lehrerGrp->searchUsers('');
 // Neue Lehrer anlegen und den Gruppen hinzufügen
 foreach ($importLuL as $usr){
 	//$uid = str_replace(' ','-',$usr['Vorname']).'.'.str_replace(' ','-',$usr['Nachname']);
+	//$uid = $usr['Lehrer_Kuerzel'];
 	$uid = umlautepas($usr['Vorname'].'.'.$usr['Nachname']);
-	
 	$pwd=strtolower(getInitialen(umlautepas($usr['Vorname']))).strtolower(getInitialen(umlautepas($usr['Nachname']))).str_replace('.','',$usr['Geburtsdatum']);
-		
+    
 	if(!in_array($uid, $ncUsers)){
 	
 		try{
 			if(!\OC::$server->getUserManager()->userExists($uid)){
 				$user = \OC::$server->getUserManager()->createUser($uid,$pwd);
-				echo 'erstelle '.$uid.PHP_EOL;
+				$user->setDisplayName(umlautepas($usr['Vorname'].' '.$usr['Nachname']));
+                $user->setQuota($config['Lehrer_Quota']);
+
+                echo 'erstelle '.$uid.PHP_EOL;
 				logMsg('User '.$uid.' mit Passwort '.$pwd.' erstellt');	
 				
 				$grp = \OC::$server->getGroupManager()->get('Lehrer');
@@ -162,20 +167,19 @@ foreach ($importLuL as $usr){
 	
 	//Überprüft die Gruppenzugehörigkeit und korrigiert diese bei Abweichungen
 
-	/*
 	if(\OC::$server->getUserManager()->userExists($uid)){
 		try{
-			$pupil = \OC::$server->getUserManager()->get($uid);
+			$teacher = \OC::$server->getUserManager()->get($uid);
 		
-			$grps = \OC::$server->getGroupManager()->getUserGroups($pupil);
-			$pupilGroups=[];
+			$grps = \OC::$server->getGroupManager()->getUserGroups($teacher);
+			$teacherGroups=[];
 		 	foreach ($grps as $grp){
-				array_push($pupilGroups, $grp->getGID());
+				array_push($teacherGroups, $grp->getGID());
 		 			
-				if($grp->getGID() == 'Schueler' || $grp->getGID() == 'Kl_'.$usr['Klasse'])continue;
+				if($grp->getGID() == 'Lehrer' || in_array(str_replace('Kl_','', $grp->getGID()), $usr['Klassen']))continue;
 			
 				
-				if(substr($grp->getGID(),0,3) == 'Kl_' && $grp->getGID() != 'Kl_'.$usr['Klasse'] ){
+				if(substr($grp->getGID(),0,3) == 'Kl_' && !in_array(str_replace('Kl_','', $grp->getGID()), $usr['Klassen']) ){
 					$grp->removeUser($pupil);
 					logMsg('User '.$uid.' wurde aus der Gruppe '.$grp->getGID() .' entfernt');
 				}
@@ -183,22 +187,24 @@ foreach ($importLuL as $usr){
 
 		}
 
-		if(!in_array('Schueler', $pupilGroups)){
-			$grp = \OC::$server->getGroupManager()->get('Schueler');
-			$grp->addUser($pupil);
-			logMsg('User '.$uid.' wurde der Gruppe Schueler hinzugefügt');
+		if(!in_array('Lehrer', $teacherGroups)){
+			$grp = \OC::$server->getGroupManager()->get('Lehrer');
+			$grp->addUser($teacher);
+			logMsg('User '.$uid.' wurde der Gruppe Lehrer hinzugefügt');
 		}
-		if(!in_array('Kl_'.$usr['Klasse'], $pupilGroups)){
-			$grp = \OC::$server->getGroupManager()->get('Kl_'.$usr['Klasse']);
-			$grp->addUser($pupil);
-			logMsg('User '.$uid.' wurde der Gruppe '.'Kl_'.$usr['Klasse'].' hinzugefügt');
-		}
-
+        foreach($usr['Klassen'] as $klasse){
+            if(!in_array('Kl_'.$klasse, $teacherGroups)){
+                $grp = \OC::$server->getGroupManager()->get('Kl_'.$klasse);
+                $grp->addUser($teacher);
+                logMsg('User '.$uid.' wurde der Gruppe '.'Kl_'.$klasse.' hinzugefügt');
+            }
+        }
+		
 		}catch (Throwable $e) {
 					logMsg('Fehler beim Ändern der Gruppenzugehörigkeit: '.$e);
 				}	
 
-	}*/
+	}
 
 
 }
@@ -210,9 +216,10 @@ logMsg(' #### Lehrerimport abgeschlossen ####');
 
 //Funktion für das Schreiben der Log-Datei
 function logMsg($msg){
-	$logfile = '/var/www/html/susImport_'. date("y-m-d") . '.log';
-	$log= date("y-m-d H:i:s.").': '.$msg.PHP_EOL;
-	error_log($log, 3, $logfile);
+    global $config;
+	if(!isset($config['logFile']) || $config['logFile'] == '' )return;
+    $log= date("y-m-d H:i:s.").': '.$msg.PHP_EOL;
+	error_log($log, 3, $config['logFile']);
 }
 // Funktion für das ersetzen von Umlauten
 function umlautepas($string){

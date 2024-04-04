@@ -11,7 +11,7 @@ require_once __DIR__.'/lib/base.php';
 require_once __DIR__.'/config/config.php';
 require_once __DIR__.'/lib/composer/autoload.php';
 require_once __DIR__.'/3rdparty/autoload.php';
-
+require_once __DIR__.'/importConfig.php';
 use PhpOffice\PhpSpreadsheet\IOFactory;
 
 $importUsers=[]; //User aus dem LUSD-Import
@@ -69,7 +69,7 @@ if(!in_Array('Schueler', $ncGroups)){
 //Klassengruppen anlegen
 foreach ($importGroups as $grp){
 	if(!in_Array($grp, $ncGroups)){
-		 \OC::$server->getGroupManager()->createGroup($grp);
+		 \OC::$server->getGroupManager()->createGroup($grp);			
 		logMsg('Gruppe '.$grp.' angelegt');
 	}
 
@@ -114,6 +114,7 @@ foreach ($importUsers as $usr){
 		try{
 			if(!\OC::$server->getUserManager()->userExists($uid)){
 				$user = \OC::$server->getUserManager()->createUser($uid,$pwd);
+				$user->setQuota($config['Schueler_Quota']);
 				echo 'erstelle '.$uid.PHP_EOL;
 				logMsg('User '.$uid.' mit Passwort '.$pwd.' erstellt');	
 				
@@ -181,9 +182,10 @@ logMsg(' #### Schülerimport abgeschlossen ####');
 
 //Funktion für das Schreiben der Log-Datei
 function logMsg($msg){
-	$logfile = '/var/www/html/susImport_'. date("y-m-d") . '.log';
-	$log= date("y-m-d H:i:s.").': '.$msg.PHP_EOL;
-	error_log($log, 3, $logfile);
+	global $config;
+	if(!isset($config['logFile']) || $config['logFile'] == '' )return;
+    $log= date("y-m-d H:i:s.").': '.$msg.PHP_EOL;
+	error_log($log, 3, $config['logFile']);
 }
 // Funktion für das ersetzen von Umlauten
 function umlautepas($string){

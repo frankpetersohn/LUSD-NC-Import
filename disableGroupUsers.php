@@ -11,6 +11,8 @@ require_once __DIR__.'/lib/base.php';
 require_once __DIR__.'/config/config.php';
 require_once __DIR__.'/lib/composer/autoload.php';
 require_once __DIR__.'/3rdparty/autoload.php';
+require_once __DIR__.'/importConfig.php';
+
 logMsg(' ####### Starte Deaktivierung der Benutzer der Gruppe: '.$argv[1].' #######');
 $ncUsers=[]; 
 try{
@@ -29,7 +31,7 @@ try{
        
         if($user->isEnabled()==true){
             $user->setEnabled(false);
-            logMsg('Benutzer '.$user->getUID().' deaktivert');
+            logMsg('Benutzer '.$user->getUID().' wurde deaktivert');
         }
 
 
@@ -47,11 +49,11 @@ logMsg(' ####### Deaktivierung von Benutzer beendet #######');
 
 //Funktion für das Schreiben der Log-Datei
 function logMsg($msg){
-	$logfile = '/var/www/html/importLog_'. date("y-m-d") . '.log';
-	$log= date("y-m-d H:i:s.").': '.$msg.PHP_EOL;
-	error_log($log, 3, $logfile);
+	global $config;
+	if(!isset($config['logFile']) || $config['logFile'] == '' )return;
+    $log= date("y-m-d H:i:s.").': '.$msg.PHP_EOL;
+	error_log($log, 3, $config['logFile']);
 }
-
 
 
 
