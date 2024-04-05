@@ -2,24 +2,24 @@
 
 /**
 Löschen aller deaktivierter Benutzer.   
-**/
+ **/
 
 
 
 // Pfade zur Nextcloud-Installation und Konfiguration
-require_once __DIR__.'/lib/base.php';
-require_once __DIR__.'/config/config.php';
-require_once __DIR__.'/lib/composer/autoload.php';
-require_once __DIR__.'/3rdparty/autoload.php';
-require_once __DIR__.'/importConfig.php';
+require_once __DIR__ . '/lib/base.php';
+require_once __DIR__ . '/config/config.php';
+require_once __DIR__ . '/lib/composer/autoload.php';
+require_once __DIR__ . '/3rdparty/autoload.php';
+require_once __DIR__ . '/importConfig.php';
 logMsg(' ####### Starte Löschung deaktivierter Benutzer #######');
-$ncUsers=[]; 
-try{
+$ncUsers = [];
+try {
 
     if (isset($argv[1])) {
         $grp = \OC::$server->getGroupManager()->get($argv[1]);
         $users = $grp->searchUsers('');
-    }else{
+    } else {
         $users = \OC::$server->getUserManager()->search('');
     }
 
@@ -28,43 +28,24 @@ try{
     // Benutzer ids 
     foreach ($users as $user) {
         //array_push($ncUsers,$user->getUID());
-        if($user->isEnabled()==false){
+        if ($user->isEnabled() == false) {
             $user->delete();
-            logMsg('Benutzer '.$user->getUID().' gelöscht');
+            logMsg('Benutzer ' . $user->getUID() . ' gelöscht');
         }
-
-
     }
-
-}catch(Exception $e){
-    logMsg('Fehler: '.$e->getMessage());
-    echo 'Fehler: '.$e->getMessage().PHP_EOL;
+} catch (Exception $e) {
+    logMsg('Fehler: ' . $e->getMessage());
+    echo 'Fehler: ' . $e->getMessage() . PHP_EOL;
 }
 
 
 logMsg(' ####### Löschung deaktivierter Benutzer beendet #######');
 
 //Funktion für das Schreiben der Log-Datei
-function logMsg($msg){
-	global $config;
-	if(!isset($config['logFile']) || $config['logFile'] == '' )return;
-    $log= date("y-m-d H:i:s.").': '.$msg.PHP_EOL;
-	error_log($log, 3, $config['logFile']);
+function logMsg($msg)
+{
+    global $config;
+    if (!isset($config['logFile']) || $config['logFile'] == '') return;
+    $log = date("y-m-d H:i:s.") . ': ' . $msg . PHP_EOL;
+    error_log($log, 3, $config['logFile']);
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-?>
