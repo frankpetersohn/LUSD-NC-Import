@@ -12,6 +12,9 @@ require_once __DIR__ . '/config/config.php';
 require_once __DIR__ . '/lib/composer/autoload.php';
 require_once __DIR__ . '/3rdparty/autoload.php';
 require_once __DIR__ . '/importConfig.php';
+require_once __DIR__ . '/config/config.php';
+
+$dataDirectory = \OC::$server->getConfig()->getSystemValue('datadirectory', \OC::$SERVERROOT . '/data');
 
 logMsg(' ####### Starte Deaktivierung der Benutzer der Gruppe: ' . $argv[1] . ' #######');
 $ncUsers = [];
@@ -47,8 +50,31 @@ logMsg(' ####### Deaktivierung von Benutzer beendet #######');
 //Funktion für das Schreiben der Log-Datei
 function logMsg($msg)
 {
-    global $config;
-    if (!isset($config['logFile']) || $config['logFile'] == '') return;
-    $log = date("y-m-d H:i:s.") . ': ' . $msg . PHP_EOL;
-    error_log($log, 3, $config['logFile']);
+
+    global $importConfig, $dataDirectory, $storage;
+    try {
+
+        $rootFolder = \OC::$server->getRootFolder();
+        $userFolder = $rootFolder->getUserFolder($importConfig['AdminUser']);
+        if (!$userFolder->nodeExists($importConfig['logFile'])) {
+            $file = $userFolder->newFile($importConfig['logFile']);
+            echo 'Logfile ' . $importConfig['logFile'] . ' erstellt' . PHP_EOL;
+            $file->putContent('Erstellt: ' . date("y-m-d H:i:s.") . PHP_EOL);
+        }
+        if ($userFolder->nodeExists($importConfig['logFile'])) {
+
+            $node = $userFolder->get($importConfig['logFile']);
+
+            if ($node instanceof \OCP\Files\File) {
+                $content = $node->getContent();
+                $log = date("y-m-d H:i:s.") . ': ' . $msg . PHP_EOL;
+                $content .= $log;
+                $node->putContent($content);
+            }
+        }
+    } catch (Exception $e) {
+
+        echo 'Fehler beim Erstellen des Logfiles: ' . $e . PHP_EOL;
+        exit;
+    }
 }

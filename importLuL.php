@@ -11,14 +11,22 @@ require_once __DIR__ . '/config/config.php';
 require_once __DIR__ . '/lib/composer/autoload.php';
 require_once __DIR__ . '/3rdparty/autoload.php';
 require_once __DIR__ . '/importConfig.php';
+require_once __DIR__ . '/config/config.php';
+
+
+$dataDirectory = \OC::$server->getConfig()->getSystemValue('datadirectory', \OC::$SERVERROOT . '/data');
+
 
 
 use PhpOffice\PhpSpreadsheet\IOFactory;
+
+
 
 $importLuL = []; //User aus dem LUSD-Import
 $importGroups = []; // Gruppen aus dem LUSD-Import
 $ncGroups = [];
 $ncUsers = [];
+
 
 // Excel-Datei einlesen
 $filename = $argv[1];
@@ -134,9 +142,9 @@ foreach ($importLuL as $usr) {
             $teacher = \OC::$server->getUserManager()->get($uid);
             $quota = $teacher->getQuota();
 
-            if ($quota != $config['Lehrer_Quota']) {
-                $teacher->setQuota($config['Lehrer_Quota']);
-                logMsg('Speicherkontingent von ' . $uid . ' auf ' . $config['Lehrer_Quota'] . ' geändert');
+            if ($quota != $importConfig['Lehrer_Quota']) {
+                $teacher->setQuota($importConfig['Lehrer_Quota']);
+                logMsg('Speicherkontingent von ' . $uid . ' auf ' . $importConfig['Lehrer_Quota'] . ' geändert');
             }
         } catch (Throwable $e) {
             logMsg('Fehler beim Ändern des Speicherkontingents: ' . $e);
@@ -173,6 +181,10 @@ foreach ($importLuL as $usr) {
                     $grp = \OC::$server->getGroupManager()->get('Kl_' . $klasse);
                     $grp->addUser($teacher);
                     logMsg('User ' . $uid . ' wurde der Gruppe ' . 'Kl_' . $klasse . ' hinzugefügt');
+                    /* if($importConfig['setGroupmanager'] == 'true'){
+                        $grp->addSubAdmin($teacher, true);
+                        logMsg('User ' . $uid . ' wurde der Gruppe ' . 'Kl_' . $klasse . ' als Gruppenmanager hinzugefügt');
+                    }*/
                 }
             }
         } catch (Throwable $e) {
@@ -186,7 +198,7 @@ foreach ($importLuL as $usr) {
             if (!\OC::$server->getUserManager()->userExists($uid)) {
                 $user = \OC::$server->getUserManager()->createUser($uid, $pwd);
                 $user->setDisplayName(umlautepas($usr['Vorname'] . ' ' . $usr['Nachname']));
-                $user->setQuota($config['Lehrer_Quota']);
+                $user->setQuota($importConfig['Lehrer_Quota']);
 
                 echo 'erstelle ' . $uid . PHP_EOL;
                 logMsg('User ' . $uid . ' mit Passwort ' . $pwd . ' erstellt');
@@ -215,10 +227,34 @@ logMsg(' #### Lehrerimport abgeschlossen ####');
 //Funktion für das Schreiben der Log-Datei
 function logMsg($msg)
 {
-    global $config;
-    if (!isset($config['logFile']) || $config['logFile'] == '') return;
-    $log = date("y-m-d H:i:s.") . ': ' . $msg . PHP_EOL;
-    error_log($log, 3, $config['logFile']);
+
+    global $importConfig, $dataDirectory, $storage;
+    try {
+
+        $rootFolder = \OC::$server->getRootFolder();
+        $userFolder = $rootFolder->getUserFolder($importConfig['AdminUser']);
+        if (!$userFolder->nodeExists($importConfig['logFile'])) {
+            $file = $userFolder->newFile($importConfig['logFile']);
+            echo 'Logfile ' . $importConfig['logFile'] . ' erstellt' . PHP_EOL;
+            $file->putContent('Erstellt: ' . date("y-m-d H:i:s.") . PHP_EOL);
+        }
+        if ($userFolder->nodeExists($importConfig['logFile'])) {
+
+            $node = $userFolder->get($importConfig['logFile']);
+
+
+            if ($node instanceof \OCP\Files\File) {
+                $content = $node->getContent();
+                $log = date("y-m-d H:i:s.") . ': ' . $msg . PHP_EOL;
+                $content .= $log;
+                $node->putContent($content);
+            }
+        }
+    } catch (Exception $e) {
+
+        echo 'Fehler beim Erstellen des Logfiles: ' . $e . PHP_EOL;
+        exit;
+    }
 }
 // Funktion für das ersetzen von Umlauten
 function umlautepas($string)
