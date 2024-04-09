@@ -35,7 +35,7 @@ klont das Repository auf Ihren Rechner.
 Die Skripte befinden sie in der Weiterentwicklung. Um auf dem neusten Stand zu bleiben, können sie mit
 
 ```
-git update
+git pull
 ```
 
 Ihre Skripte auf dem neusten Stand halten.
@@ -56,9 +56,7 @@ Für die Anpassung auf Ihre Bedürfnisse stehen in der Datei **importConfig.php*
   Installationspfad der Nextcloud
 - **'AdminUser' => 'Admin'**  
   Benutzername des Admins. In seinen Ordner werden die Logdateien geschrieben.
--
-
----
+- ***
 
 #### Import von Schülern
 

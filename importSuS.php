@@ -7,12 +7,13 @@ Lernendenimport aus der LUSD.
 
 
 // Pfade zur Nextcloud-Installation und Konfiguration
-require_once __DIR__ . '/lib/base.php';
-require_once __DIR__ . '/config/config.php';
-require_once __DIR__ . '/lib/composer/autoload.php';
-require_once __DIR__ . '/3rdparty/autoload.php';
+
 require_once __DIR__ . '/importConfig.php';
-require_once __DIR__ . '/config/config.php';
+require_once $importConfig['nextcloudPath'] . '/config/config.php';
+require_once $importConfig['nextcloudPath'] . '/lib/base.php';
+require_once $importConfig['nextcloudPath'] . '/config/config.php';
+require_once $importConfig['nextcloudPath'] . '/lib/composer/autoload.php';
+require_once $importConfig['nextcloudPath'] . '/3rdparty/autoload.php';
 
 use PhpOffice\PhpSpreadsheet\IOFactory;
 
