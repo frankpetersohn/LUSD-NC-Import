@@ -23,6 +23,7 @@ $importUsers = []; //User aus dem LUSD-Import
 $importGroups = []; // Gruppen aus dem LUSD-Import
 $ncGroups = [];
 $ncUsers = [];
+$pwExportListe = [];
 
 // Excel-Datei einlesen
 $filename = $argv[1];
@@ -39,20 +40,29 @@ $sheetData = $sheet->toArray(null, true, true, true);
 
 
 $z = 0;
+$spaltenNamen = [];
 foreach ($sheetData as $row) {
 	$z++;
-	if ($z <= 1) continue;
-	$sus = [];
-	$sus['Vorname'] = $row["B"];
-	$sus['Nachname'] = $row["A"];
-	$sus['Gebdatum'] = $row['C'];
-	$sus['Geschlecht'] = $row['D'];
-	$sus['Klasse'] = $row['E'];
-	array_push($importUsers, $sus);
-	if (!in_array($row['E'], $importGroups) && $row['E'] != null) {
-		array_push($importGroups, 'Kl_' . $row['E']);
+	if ($z == 1) {
+		foreach ($row as $key => $value) {
+			$s = [];
+			if ($value != '') {
+				$spaltenNamen[$key] = $value;
+			}
+		}
+	} else {
+		$sus = [];
+		foreach ($row as $key => $value) {
+			$sus[$spaltenNamen[$key]] = $value;
+		}
+		array_push($importUsers, $sus);
+		$grpBezeichnung = $importConfig['klassenPraefix'] . $sus['Klassen_Klassenbezeichnung'] . $importConfig['klassenSuffix'];
+		if (!in_array($grpBezeichnung, $importGroups) && $sus['Klassen_Klassenbezeichnung'] != null) {
+			array_push($importGroups, $grpBezeichnung);
+		}
 	}
 }
+
 
 
 
@@ -70,6 +80,7 @@ if (!in_Array('Schueler', $ncGroups)) {
 	\OC::$server->getGroupManager()->createGroup('Schueler');
 	logMsg('Gruppe Schueler angelegt');
 }
+
 
 //Klassengruppen anlegen
 foreach ($importGroups as $grp) {
@@ -108,17 +119,18 @@ try {
 // Neue Schüler anlegen und den Gruppen hinzufügen
 foreach ($importUsers as $usr) {
 	//$uid = str_replace(' ','-',$usr['Vorname']).'.'.str_replace(' ','-',$usr['Nachname']);
-	$uid = umlautepas($usr['Vorname'] . '.' . $usr['Nachname']);
+	$uid = umlautepas($usr['Schueler_Vorname'] . '.' . $usr['Schueler_Nachname']);
 
-	$pwd = strtolower(getInitialen(umlautepas($usr['Vorname']))) . strtolower(getInitialen(umlautepas($usr['Nachname']))) . str_replace('.', '', $usr['Gebdatum']);
+	$pwd = strtolower(getInitialen(umlautepas($usr['Schueler_Vorname']))) . strtolower(getInitialen(umlautepas($usr['Schueler_Nachname']))) . str_replace('.', '', $usr['Schueler_Geburtsdatum']);
 
 	if (!in_array($uid, $ncUsers)) {
 
 		try {
 			if (!\OC::$server->getUserManager()->userExists($uid)) {
 				$user = \OC::$server->getUserManager()->createUser($uid, $pwd);
+				array_push($pwExportListe, $usr['Schueler_Nachname'] . ';' . $usr['Schueler_Vorname'] . ';' . $uid . ';' . $pwd);
 				$user->setQuota($importConfig['Schueler_Quota']);
-				$user->setDisplayName(umlautepas($usr['Vorname'] . ' ' . $usr['Nachname']));
+				$user->setDisplayName(umlautepas($usr['Schueler_Vorname'] . ' ' . $usr['Schueler_Nachname']));
 				echo 'erstelle ' . $uid . PHP_EOL;
 				logMsg('User ' . $uid . ' mit Passwort ' . $pwd . ' erstellt');
 
@@ -126,9 +138,9 @@ foreach ($importUsers as $usr) {
 				$grp->addUser($user);
 				logMsg('User ' . $uid . ' wurde der Gruppe Schueler hinzugefügt');
 
-				$grp = \OC::$server->getGroupManager()->get('Kl_' . $usr['Klasse']);
+				$grp = \OC::$server->getGroupManager()->get($importConfig['klassenPraefix'] . $usr['Klassen_Klassenbezeichnung'] . $importConfig['klassenSuffix']);
 				$grp->addUser($user);
-				logMsg('User ' . $uid . ' wurde der Gruppe ' . 'Kl_' . $usr['Klasse'] . ' hinzugefügt');
+				logMsg('User ' . $uid . ' wurde der Gruppe ' . $importConfig['klassenPraefix'] . $usr['Klassen_Klassenbezeichnung'] . $importConfig['klassenSuffix'] . ' hinzugefügt');
 			}
 		} catch (Throwable $e) {
 			logMsg('User ' . $uid . ' erstellt ist fehlgeschlagen: ' . $e);
@@ -147,24 +159,26 @@ foreach ($importUsers as $usr) {
 			foreach ($grps as $grp) {
 				array_push($pupilGroups, $grp->getGID());
 
-				if ($grp->getGID() == 'Schueler' || $grp->getGID() == 'Kl_' . $usr['Klasse']) continue;
+				if ($grp->getGID() == 'Schueler' || $grp->getGID() == $importConfig['klassenPraefix'] . $usr['Klassen_Klassenbezeichnung'] . $importConfig['klassenSuffix']) {
+					continue;
+				}
 
-
-				if (substr($grp->getGID(), 0, 3) == 'Kl_' && $grp->getGID() != 'Kl_' . $usr['Klasse']) {
-					$grp->removeUser($pupil);
-					logMsg('User ' . $uid . ' wurde aus der Gruppe ' . $grp->getGID() . ' entfernt');
+				if ($importConfig['klassenPraefix'] != '' || $importConfig['klassenSuffix'] != '') {
+					if ((str_starts_with($grp->getGID(), $importConfig['klassenPraefix']) || str_ends_with($grp->getGID(), $importConfig['klassenSuffix'])) && $grp->getGID() != $importConfig['klassenPraefix'] . $usr['Klassen_Klassenbezeichnung'] . $importConfig['klassenSuffix']) {
+						$grp->removeUser($pupil);
+						logMsg('User ' . $uid . ' wurde aus der Gruppe ' . $grp->getGID() . ' entfernt');
+					}
 				}
 			}
-
 			if (!in_array('Schueler', $pupilGroups)) {
 				$grp = \OC::$server->getGroupManager()->get('Schueler');
 				$grp->addUser($pupil);
 				logMsg('User ' . $uid . ' wurde der Gruppe Schueler hinzugefügt');
 			}
-			if (!in_array('Kl_' . $usr['Klasse'], $pupilGroups)) {
-				$grp = \OC::$server->getGroupManager()->get('Kl_' . $usr['Klasse']);
+			if (!in_array($importConfig['klassenPraefix'] . $usr['Klassen_Klassenbezeichnung'] . $importConfig['klassenSuffix'], $pupilGroups)) {
+				$grp = \OC::$server->getGroupManager()->get($importConfig['klassenPraefix'] . $usr['Klassen_Klassenbezeichnung'] . $importConfig['klassenSuffix']);
 				$grp->addUser($pupil);
-				logMsg('User ' . $uid . ' wurde der Gruppe ' . 'Kl_' . $usr['Klasse'] . ' hinzugefügt');
+				logMsg('User ' . $uid . ' wurde der Gruppe ' . $importConfig['klassenPraefix'] . $usr['Klassen_Klassenbezeichnung'] . $importConfig['klassenSuffix'] . ' hinzugefügt');
 			}
 		} catch (Throwable $e) {
 			logMsg('Fehler beim Ändern der Gruppenzugehörigkeit: ' . $e);
@@ -172,6 +186,39 @@ foreach ($importUsers as $usr) {
 	}
 }
 
+//Schreibe Passwortliste in Datei   
+if (sizeof($pwExportListe) > 0) {
+
+	try {
+
+		$rootFolder = \OC::$server->getRootFolder();
+		$userFolder = $rootFolder->getUserFolder($importConfig['AdminUser']);
+		$filename = 'SuS_' . $importConfig['pwExportFile'];
+		if (!$userFolder->nodeExists($filename)) {
+			$file = $userFolder->newFile($filename);
+			echo 'Erstpasswörter' . $filename . ' erstellt' . PHP_EOL;
+		}
+
+		if ($userFolder->nodeExists($filename)) {
+
+			$node = $userFolder->get($filename);
+
+
+			if ($node instanceof \OCP\Files\File) {
+				$content = $node->getContent();
+				foreach ($pwExportListe as $line) {
+					$content .= $line . PHP_EOL;
+				}
+
+				$node->putContent($content);
+			}
+		}
+	} catch (Exception $e) {
+		logMsg('Fehler beim Erstellen des Logfiles: ' . $e . PHP_EOL);
+		echo 'Fehler beim Erstellen des Logfiles: ' . $e . PHP_EOL;
+		exit;
+	}
+}
 
 logMsg(' #### Schülerimport abgeschlossen ####');
 
@@ -264,7 +311,7 @@ function getInitialen($string)
 function susExists($personen, $vorname, $nachname)
 {
 	foreach ($personen as $person) {
-		if ($person['Vorname'] === $vorname && $person['Nachname'] === $nachname) {
+		if ($person['Schueler_Vorname'] === $vorname && $person['Schueler_Nachname'] === $nachname) {
 			return true;
 		}
 	}

@@ -23,6 +23,7 @@ $importLuL = []; //User aus dem LUSD-Import
 $importGroups = []; // Gruppen aus dem LUSD-Import
 $ncGroups = [];
 $ncUsers = [];
+$pwExportListe = [];
 
 
 // Excel-Datei einlesen
@@ -56,8 +57,8 @@ foreach ($sheetData as $row) {
 
             if (($spaltenNamen[$key] == 'Klassenlehrer_Klasse' || $spaltenNamen[$key] == 'Klassenlehrer_Vertreter_Klasse') && $value != '') {
                 $lul['Klassen'][] = $value;
-                if (!in_array('Kl_' . $value, $importGroups)) {
-                    array_push($importGroups, 'Kl_' . $value);
+                if (!in_array($importConfig['klassenPraefix'] . $value . $importConfig['klassenSuffix'], $importGroups)) {
+                    array_push($importGroups, $importConfig['klassenPraefix'] . $value . $importConfig['klassenSuffix']);
                 }
             } else {
                 $lul[$spaltenNamen[$key]] = $value;
@@ -129,10 +130,6 @@ foreach ($importLuL as $usr) {
     //$uid = $usr['Lehrer_Kuerzel'];
     $uid = umlautepas($usr['Vorname'] . '.' . $usr['Nachname']);
     $pwd = strtolower(getInitialen(umlautepas($usr['Vorname']))) . strtolower(getInitialen(umlautepas($usr['Nachname']))) . str_replace('.', '', $usr['Geburtsdatum']);
-
-
-
-
     if (\OC::$server->getUserManager()->userExists($uid)) {
         try {
             //Überprüfung und Anpassunge des Speicherkontingents
@@ -147,8 +144,6 @@ foreach ($importLuL as $usr) {
             logMsg('Fehler beim Ändern des Speicherkontingents: ' . $e);
         }
 
-
-
         //Überprüft die Gruppenzugehörigkeit und korrigiert diese bei Abweichungen
 
         try {
@@ -158,15 +153,20 @@ foreach ($importLuL as $usr) {
             $teachersGroups = [];
             foreach ($grps as $grp) {
                 array_push($teachersGroups, $grp->getGID());
-
-                if ($grp->getGID() == 'Lehrer' || in_array(str_replace('Kl_', '', $grp->getGID()), $usr['Klassen'])) continue;
-
-
-                if (substr($grp->getGID(), 0, 3) == 'Kl_' && !in_array(str_replace('Kl_', '', $grp->getGID()), $usr['Klassen'])) {
+                if ($importConfig['klassenPraefix'] != '' || $importConfig['klassenSuffix'] != '') {
+                    $klassenbezeichnung = str_replace($importConfig['klassenPraefix'], '', $grp->getGID());
+                    $klassenbezeichnung = str_replace($importConfig['klassenSuffix'], '', $klassenbezeichnung);
+                    if ($grp->getGID() == 'Lehrer' || in_array($klassenbezeichnung, $usr['Klassen'])) continue;
+                }
+                if ((str_starts_with($grp->getGID(), $importConfig['klassenPraefix']) || str_ends_with($grp->getGID(), $importConfig['klassenSuffix'])) && !in_array($klassenbezeichnung, $usr['Klassen'])) {
                     $grp->removeUser($teacher);
                     logMsg('User ' . $uid . ' wurde aus der Gruppe ' . $grp->getGID() . ' entfernt');
                 }
+                // if (substr($grp->getGID(), 0, 3) == $importConfig['klassenPraefix'] && !in_array(str_replace($importConfig['klassenPraefix'], '', $grp->getGID()), $usr['Klassen'])) {
+                $grp->removeUser($teacher);
+                logMsg('User ' . $uid . ' wurde aus der Gruppe ' . $grp->getGID() . ' entfernt');
             }
+
 
             if (!in_array('Lehrer', $teachersGroups)) {
                 $grp = \OC::$server->getGroupManager()->get('Lehrer');
@@ -174,14 +174,10 @@ foreach ($importLuL as $usr) {
                 logMsg('User ' . $uid . ' wurde der Gruppe Lehrer hinzugefügt');
             }
             foreach ($usr['Klassen'] as $klasse) {
-                if (!in_array('Kl_' . $klasse, $teachersGroups)) {
-                    $grp = \OC::$server->getGroupManager()->get('Kl_' . $klasse);
+                if (!in_array($importConfig['klassenPraefix'] . $klasse . $importConfig['klassenSuffix'], $teachersGroups)) {
+                    $grp = \OC::$server->getGroupManager()->get($importConfig['klassenPraefix'] . $klasse . $importConfig['klassenSuffix']);
                     $grp->addUser($teacher);
-                    logMsg('User ' . $uid . ' wurde der Gruppe ' . 'Kl_' . $klasse . ' hinzugefügt');
-                    /* if($importConfig['setGroupmanager'] == 'true'){
-                        $grp->addSubAdmin($teacher, true);
-                        logMsg('User ' . $uid . ' wurde der Gruppe ' . 'Kl_' . $klasse . ' als Gruppenmanager hinzugefügt');
-                    }*/
+                    logMsg('User ' . $uid . ' wurde der Gruppe ' . $importConfig['klassenPraefix'] . $klasse . $importConfig['klassenSuffix'] . ' hinzugefügt');
                 }
             }
         } catch (Throwable $e) {
@@ -190,10 +186,10 @@ foreach ($importLuL as $usr) {
     }
     //Neue Lehrer anlegen
     if (!in_array($uid, $ncUsers)) {
-
         try {
             if (!\OC::$server->getUserManager()->userExists($uid)) {
                 $user = \OC::$server->getUserManager()->createUser($uid, $pwd);
+                array_push($pwExportListe, $usr['Nachname'] . ';' . $usr['Vorname'] . ';' . $uid . ';' . $pwd);
                 $user->setDisplayName(umlautepas($usr['Vorname'] . ' ' . $usr['Nachname']));
                 $user->setQuota($importConfig['Lehrer_Quota']);
 
@@ -205,9 +201,9 @@ foreach ($importLuL as $usr) {
                 logMsg('User ' . $uid . ' wurde der Gruppe Lehrer hinzugefügt');
 
                 foreach ($usr['Klassen'] as $klasse) {
-                    $grp = \OC::$server->getGroupManager()->get('Kl_' . $klasse);
+                    $grp = \OC::$server->getGroupManager()->get($importConfig['klassenPraefix'] . $klasse . $importConfig['klassenSuffix']);
                     $grp->addUser($user);
-                    logMsg('User ' . $uid . ' wurde der Gruppe ' . 'Kl_' . $klasse . ' hinzugefügt');
+                    logMsg('User ' . $uid . ' wurde der Gruppe ' . $importConfig['klassenPraefix'] . $klasse . $importConfig['klassenSuffix'] . ' hinzugefügt');
                 }
             }
         } catch (Throwable $e) {
@@ -216,6 +212,38 @@ foreach ($importLuL as $usr) {
     }
 }
 
+//Schreibe Passwortliste in Datei   
+if (sizeof($pwExportListe) > 0) {
+
+    try {
+
+        $rootFolder = \OC::$server->getRootFolder();
+        $userFolder = $rootFolder->getUserFolder($importConfig['AdminUser']);
+        $filename = 'LuL_' . $importConfig['pwExportFile'];
+        if (!$userFolder->nodeExists($filename)) {
+            $file = $userFolder->newFile($filename);
+            echo 'Erstpasswörter' . $filename . ' erstellt' . PHP_EOL;
+        }
+
+        if ($userFolder->nodeExists($filename)) {
+
+            $node = $userFolder->get($filename);
+
+            if ($node instanceof \OCP\Files\File) {
+                $content = $node->getContent();
+                foreach ($pwExportListe as $line) {
+                    $content .= $line . PHP_EOL;
+                }
+
+                $node->putContent($content);
+            }
+        }
+    } catch (Exception $e) {
+        logMsg('Fehler beim Erstellen des Logfiles: ' . $e . PHP_EOL);
+        echo 'Fehler beim Erstellen des Logfiles: ' . $e . PHP_EOL;
+        exit;
+    }
+}
 
 logMsg(' #### Lehrerimport abgeschlossen ####');
 
