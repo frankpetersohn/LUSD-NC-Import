@@ -1,4 +1,4 @@
-### Sammlung von PHP-Skripten zum Import der Userdaten aus der LUSD in eine Nextcloud
+## Sammlung von PHP-Skripten zum Import der Userdaten aus der LUSD in eine Nextcloud
 
 ---
 
@@ -7,7 +7,7 @@ Beim Import werden Gruppen für Schüler und Lehrkräfte sowie für jede Klasse 
 
 ---
 
-#### Vorbereiten der Nextcloud-Instanz
+### Vorbereiten der Nextcloud-Instanz
 
 Je nach Installationsart, kann es sein, dass Composer noch nicht installiert ist. Um Composer zu installieren, wechselt man ins Installationsverzeichnis der Nextcloud und installiert Composer wie folgt:
 
@@ -41,9 +41,9 @@ git pull
 
 Ihre Skripte auf dem neusten Stand halten.
 
-##### 
+---
 
-#### Konfiguration
+### Konfiguration
 
 Für die Anpassung auf Ihre Bedürfnisse stehen in der Datei **importConfig.php** folgende Optionen bereit:
 
@@ -63,11 +63,10 @@ Für die Anpassung auf Ihre Bedürfnisse stehen in der Datei **importConfig.php*
   Wird der Klassengruppe nachgestellt
 - **'AdminUser' => 'Admin'**  
   Benutzername des Admins. In seinen Ordner werden die Logdateien geschrieben.
-- 
 
 ---
 
-#### Ausführen der Skripte
+### Ausführen der Skripte
 
 Zum Ausführen der Skripte wechseln Sie, in den Sie die Skripte heruntergeladen haben und führen sie mit folgender Syntax aus:
 
@@ -75,7 +74,9 @@ Zum Ausführen der Skripte wechseln Sie, in den Sie die Skripte heruntergeladen 
 sudo -u www-data php <skriptname.php> <option>
 ```
 
-#### Import von Schülern
+---
+
+### Import von Schülern
 
 Für den Import von Schülern wird eine Excel-Datei mit mindestens den folgenden Spalten benötigt:  
 ***Schueler_Nachname, Schueler_Vorname, Schueler_Geburtsdatum, Klassen_Klassenbezeichnung.***  
@@ -97,7 +98,9 @@ sudo -u www-data php importSuS.php ../data/admin/files/susimort.xlsx
 - Am Ende des Importvorganges wir eine CSV-Datei mit den Erstpasswörter der Schüler in das Verzeichnis des in der *importConfig.php* angegebenen AdminUser gelegt.
 - ℹ️ Schüler,  die der Gruppe Schueler angehören, aber nicht in der Importdatei enthalten sind, werden deaktiviert. So können ausgeschiedene Schüler später einfacher gelöscht, oder wieder aktiv gesetzt werden. 
 
-#### Import von Lehrkräften
+---
+
+### Import von Lehrkräften
 
 Für den Import von Lehrkräften wird eine Excel-Datei mit mindestens den folgenden Spalten benötigt:  
 **Nachname, Vorname, Geburtsdatum, Klassenlehrer_Klasse, Klassenlehrer_Vertreter_Klasse, Lehrer_Kuerzel**  
@@ -119,7 +122,9 @@ sudo -u www-data php importLuL.php ../data/admin/files/susimort.xlsx
 - Am Ende des Importvorganges wir eine CSV-Datei mit den Erstpasswörter der Schüler in das Verzeichnis des in der *importConfig.php* angegebenen AdminUser gelegt.
 - ℹ️ Lehrkräfte,  die der Gruppe Lehrer angehören, aber nicht in der Importdatei enthalten sind, werden deaktiviert. 
 
-#### Deaktivieren von Benutzern 
+---
+
+### Deaktivieren von Benutzern 
 
 Mit dem Skript [disableGroupUsers.php](https://github.com/frankpetersohn/LUSD-NC-Import/blob/master/disableGroupUsers.php "disableGroupUsers.php") können Mitglieder einer Gruppe deaktiviert werden.   
 Die Syntax dazu lautet:
@@ -128,7 +133,9 @@ Die Syntax dazu lautet:
 sudo -u www-data php disableGroupUsers.php <Gruppenname>
 ```
 
-#### Löschen deaktivierter Benutzer
+---
+
+### Löschen deaktivierter Benutzer
 
 Mit dem Skript [delDisabledUsers.php](https://github.com/frankpetersohn/LUSD-NC-Import/blob/master/delDisabledUsers.php "delDisabledUsers.php") werden deaktivierte Benutzer gelöscht. Als optionalen Parameter kann dabei einen Gruppennamen übergeben. Bei Aufruf des Skriptes ohne den Parameter werden alle in der Nextcloud deaktivierten Benutzer gelöscht, mit Parameter werden nur die deaktivierten Benutzer mit der entsprechenden Gruppenzugehörigkeit gelöscht.  
 Der Aufruf lautet:
@@ -137,7 +144,9 @@ Der Aufruf lautet:
 sudo -u www-data php delDisabledUsers.php [Gruppenname]
 ```
 
-#### Gruppen löschen
+---
+
+### Gruppen löschen
 
 Das Skript [delGroups.php](https://github.com/frankpetersohn/LUSD-NC-Import/blob/master/delGroups.php "delGroups.php") löscht Gruppen, die es aus einer Excel-Datei ausliest. Dafür wird eine Excel-Datei genutzt, welche die Namen der zu löschenden Gruppen in der ersten Spalte ohne Spaltenüberschrift enthält.
 
