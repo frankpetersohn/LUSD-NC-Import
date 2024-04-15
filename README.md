@@ -137,7 +137,7 @@ sudo -u www-data php disableGroupUsers.php <Gruppenname>
 
 ### Löschen deaktivierter Benutzer
 
-Mit dem Skript [delDisabledUsers.php](https://github.com/frankpetersohn/LUSD-NC-Import/blob/master/delDisabledUsers.php "delDisabledUsers.php") werden deaktivierte Benutzer gelöscht. Als optionalen Parameter kann dabei einen Gruppennamen übergeben. Bei Aufruf des Skriptes ohne den Parameter werden alle in der Nextcloud deaktivierten Benutzer gelöscht, mit Parameter werden nur die deaktivierten Benutzer mit der entsprechenden Gruppenzugehörigkeit gelöscht.  
+Mit dem Skript [delDisabledUsers.php](https://github.com/frankpetersohn/LUSD-NC-Import/blob/master/delDisabledUsers.php "delDisabledUsers.php") werden deaktivierte Benutzer gelöscht. Als optionalen Parameter kann ein Gruppennamen übergeben werden. Bei Aufruf des Skriptes ohne den Parameter werden alle in der Nextcloud deaktivierten Benutzer gelöscht, mit Parameter werden nur die deaktivierten Benutzer mit der entsprechenden Gruppenzugehörigkeit gelöscht.  
 Der Aufruf lautet:
 
 ```
