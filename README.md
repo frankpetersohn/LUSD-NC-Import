@@ -116,7 +116,7 @@ sudo -u www-data php importLuL.php ../data/admin/files/susimort.xlsx
 
 - Der Anmeldename der Lehrkräfte hat die Syntax ***Vorname.Nachname.***
 - Das Passwort der Lehrkräfte besteht aus den Initialen und dem Geburtsdatum ohen Trennzeichen.  
-  *Beispiel: Hans Werner.Mueler geb. 18.03.2005 => Passwort: hwm18032005*
+  *Beispiel: Michaela.Huber Schluze geb. 28.06.1991 => Passwort: mhs28061991*
 - ⚠️ Es kann vorkommen, dass das Passwort bereits in einer Passworttabelle geführt wird und deshalb das Anlegen des Users fehlschlägt. Kontrollieren Sie deshalb unbedingt in der Logdatei, ob alle Schüler ordnungsgemäß angelegt wurden.
 - Die Lehrkräfte werden in die Gruppe *Lehrer*  aufgenommen. Zusätzlich werde Lehrkräfte den Klassengruppen aus den Feldern Klassenlehrer_Klasse und Klassenlehrer_Vertreter_Klasse hinzugefügt. Die Bezeichnung der Klassengruppen setzt sich zusammen aus dem Suffix, der Klassenbezeichnung aus der Importdatei und dem Präfix. Präfix und Suffix können optional in der importConfig.php angegeben werden.  Sie sollten unbedingt mindestens einen dieser beiden Werte setzen, da über diese Zusätze die Klassengruppen erkannt werden. Manuell angelegte Gruppenzuweisungen werden nicht geändert.
 - Am Ende des Importvorganges wir eine CSV-Datei mit den Erstpasswörter der Lehrkräfte in das Verzeichnis des in der *importConfig.php* angegebenen AdminUser gelegt.
