@@ -94,7 +94,7 @@ sudo -u www-data php importSuS.php ../data/admin/files/susimort.xlsx
 - Das Passwort der Schüler besteht aus den Initialen und dem Geburtsdatum ohne Trennzeichen.  
   *Beispiel: Hans Werner.Mueler geb. 18.03.2005 => Passwort: hwm18032005*
 - ⚠️ Es kann vorkommen, dass das Passwort bereits in einer Passworttabelle geführt wird und deshalb das Anlegen des Users fehlschlägt. Kontrollieren Sie deshalb unbedingt in der Logdatei, ob alle Schüler ordnungsgemäß angelegt wurden.
-- Die Schüler werden in die Gruppe *Schueler* aufgenommen. Darüber hinaus, werden für jede Klasse jeweils eine Gruppe erstellt. Die Bezeigung der Klassengruppen setzt sich zusammen aus dem Suffix, der Klassenbezeichnung aus der Importdatei und dem Präfix. Präfix und Suffix können optional in der importConfig.php angegeben werden.  Sie sollten unbedingt mindestens einen dieser beiden Werte setzen, da über diese Zusätze die Klassengruppen erkannt werden. So wird bei einem Klassenwechsel des Schülers bei einem erneuten Import auch die Gruppenzugehörigkeit angepasst.
+- Die Schüler werden in die Gruppe *Schueler* aufgenommen. Darüber hinaus, werden für jede Klasse jeweils eine Gruppe erstellt. Die Bezeichnung der Klassengruppen setzt sich zusammen aus dem Suffix, der Klassenbezeichnung aus der Importdatei und dem Präfix. Präfix und Suffix können optional in der importConfig.php angegeben werden.  Sie sollten unbedingt mindestens einen dieser beiden Werte setzen, da über diese Zusätze die Klassengruppen erkannt werden. So wird bei einem Klassenwechsel des Schülers bei einem erneuten Import auch die Gruppenzugehörigkeit angepasst. Manuell angelegte Gruppenzuweisungen werden nicht geändert.
 - Am Ende des Importvorganges wir eine CSV-Datei mit den Erstpasswörter der Schüler in das Verzeichnis des in der *importConfig.php* angegebenen AdminUser gelegt.
 - ℹ️ Schüler,  die der Gruppe Schueler angehören, aber nicht in der Importdatei enthalten sind, werden deaktiviert. So können ausgeschiedene Schüler später einfacher gelöscht, oder wieder aktiv gesetzt werden. 
 
@@ -118,8 +118,8 @@ sudo -u www-data php importLuL.php ../data/admin/files/susimort.xlsx
 - Das Passwort der Lehrkräfte besteht aus den Initialen und dem Geburtsdatum ohen Trennzeichen.  
   *Beispiel: Hans Werner.Mueler geb. 18.03.2005 => Passwort: hwm18032005*
 - ⚠️ Es kann vorkommen, dass das Passwort bereits in einer Passworttabelle geführt wird und deshalb das Anlegen des Users fehlschlägt. Kontrollieren Sie deshalb unbedingt in der Logdatei, ob alle Schüler ordnungsgemäß angelegt wurden.
-- Die Lehrkräfte werden in die Gruppe *Lehrer*  aufgenommen. Zusätzlich werde Lehrkräfte den Klassengruppen aus den Feldern Klassenlehrer_Klasse und Klassenlehrer_Vertreter_Klasse hinzugefügt. Die Bezeigung der Klassengruppen setzt sich zusammen aus dem Suffix, der Klassenbezeichnung aus der Importdatei und dem Präfix. Präfix und Suffix können optional in der importConfig.php angegeben werden.  Sie sollten unbedingt mindestens einen dieser beiden Werte setzen, da über diese Zusätze die Klassengruppen erkannt werden. 
-- Am Ende des Importvorganges wir eine CSV-Datei mit den Erstpasswörter der Schüler in das Verzeichnis des in der *importConfig.php* angegebenen AdminUser gelegt.
+- Die Lehrkräfte werden in die Gruppe *Lehrer*  aufgenommen. Zusätzlich werde Lehrkräfte den Klassengruppen aus den Feldern Klassenlehrer_Klasse und Klassenlehrer_Vertreter_Klasse hinzugefügt. Die Bezeichnung der Klassengruppen setzt sich zusammen aus dem Suffix, der Klassenbezeichnung aus der Importdatei und dem Präfix. Präfix und Suffix können optional in der importConfig.php angegeben werden.  Sie sollten unbedingt mindestens einen dieser beiden Werte setzen, da über diese Zusätze die Klassengruppen erkannt werden. Manuell angelegte Gruppenzuweisungen werden nicht geändert.
+- Am Ende des Importvorganges wir eine CSV-Datei mit den Erstpasswörter der Lehrkräfte in das Verzeichnis des in der *importConfig.php* angegebenen AdminUser gelegt.
 - ℹ️ Lehrkräfte,  die der Gruppe Lehrer angehören, aber nicht in der Importdatei enthalten sind, werden deaktiviert. 
 
 ---
@@ -137,7 +137,7 @@ sudo -u www-data php disableGroupUsers.php <Gruppenname>
 
 ### Löschen deaktivierter Benutzer
 
-Mit dem Skript [delDisabledUsers.php](https://github.com/frankpetersohn/LUSD-NC-Import/blob/master/delDisabledUsers.php "delDisabledUsers.php") werden deaktivierte Benutzer gelöscht. Als optionaler Parameter kann ein Gruppennamen übergeben werden. Bei Aufruf des Skriptes ohne den Parameter werden alle in der Nextcloud deaktivierten Benutzer gelöscht, mit Parameter werden nur die deaktivierten Benutzer mit der entsprechenden Gruppenzugehörigkeit gelöscht.  
+Mit dem Skript [delDisabledUsers.php](https://github.com/frankpetersohn/LUSD-NC-Import/blob/master/delDisabledUsers.php "delDisabledUsers.php") werden deaktivierte Benutzer gelöscht. Als optionaler Parameter kann  ein Gruppenname übergeben werden. Bei Aufruf des Skriptes ohne den Parameter werden alle in der Nextcloud deaktivierten Benutzer gelöscht, mit Parameter werden nur die deaktivierten Benutzer mit der entsprechenden Gruppenzugehörigkeit gelöscht.  
 Der Aufruf lautet:
 
 ```
