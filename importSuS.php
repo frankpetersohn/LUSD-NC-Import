@@ -19,6 +19,13 @@ use PhpOffice\PhpSpreadsheet\IOFactory;
 
 $dataDirectory = \OC::$server->getConfig()->getSystemValue('datadirectory', \OC::$SERVERROOT . '/data');
 
+//Passwortkonfiguration überprüfen
+if (!in_array($importConfig['Schueler-Passwort'], ['Words', 'Initalen', 'Zufall'])) {
+	logMsg(' Der Import konnte aufgrund einer falschen Passwortkonfiguration nicht gestartet werden');
+	echo (' Der Import konnte aufgrund einer falschen Passwortkonfiguration nicht gestartet werden');
+	die;
+}
+
 $importUsers = []; //User aus dem LUSD-Import
 $importGroups = []; // Gruppen aus dem LUSD-Import
 $ncGroups = [];
@@ -121,12 +128,18 @@ foreach ($importUsers as $usr) {
 	//$uid = str_replace(' ','-',$usr['Vorname']).'.'.str_replace(' ','-',$usr['Nachname']);
 	$uid = umlautepas($usr['Schueler_Vorname'] . '.' . $usr['Schueler_Nachname']);
 
-	$pwd = strtolower(getInitialen(umlautepas($usr['Schueler_Vorname']))) . strtolower(getInitialen(umlautepas($usr['Schueler_Nachname']))) . str_replace('.', '', $usr['Schueler_Geburtsdatum']);
 
 	if (!in_array($uid, $ncUsers)) {
 
 		try {
 			if (!\OC::$server->getUserManager()->userExists($uid)) {
+				if ($importConfig['Schueler-Passwort'] == 'Words') {
+					$pwd = makePassword(4);
+				} elseif ($importConfig['Schueler-Passwort'] == 'Initalen') {
+					$pwd = strtolower(getInitialen(umlautepas($usr['Schueler_Vorname']))) . strtolower(getInitialen(umlautepas($usr['Schueler_Nachname']))) . str_replace('.', '', $usr['Schueler_Geburtsdatum']);
+				} elseif ($importConfig['Schueler-Passwort'] == 'Zufall') {
+					$pwd = generatePassword(10);
+				}
 				$user = \OC::$server->getUserManager()->createUser($uid, $pwd);
 				array_push($pwExportListe, $usr['Schueler_Nachname'] . ';' . $usr['Schueler_Vorname'] . ';' . $uid . ';' . $pwd);
 				$user->setQuota($importConfig['Schueler_Quota']);
@@ -273,7 +286,7 @@ function makePassword($len)
 		'Fisch', 'Feld', 'Fenster', 'Flur', 'Flasche', 'Feder', 'Fehler', 'Feuer', 'Familie', 'Fahne',
 		'Glas', 'Geld', 'Garten', 'Gabel', 'Gans', 'Golf', 'Gurt', 'Gras', 'Geschenk', 'Giraffe',
 		'Haus', 'Hund', 'Hemd', 'Hut', 'Herz', 'Hof', 'Herd', 'Hase', 'Hotel', 'Hose',
-		'Igel', 'Idee', 'Insel', 'Ist', 'Igel', 'Iglo', 'Irrenhaus', 'Iris', 'Ikarus', 'Idee',
+		'Igel', 'Idee', 'Insel', 'Indien', 'Igel', 'Iglo', 'Irrenhaus', 'Iris', 'Ikarus', 'Idee',
 		'Jahr', 'Junge', 'Jacke', 'Jagd', 'Juwel', 'Judo', 'Jod', 'Jungfrau', 'Journal', 'Jahrmarkt',
 		'Keks', 'Kaffee', 'Käse', 'Korb', 'Kran', 'Kopf', 'Kuchen', 'Karte', 'Kerze', 'Kino',
 		'Lampe', 'Löffel', 'Lager', 'Leiter', 'Löwe', 'Laterne', 'Leine', 'Lust', 'Liebe', 'Lehrer',
@@ -291,6 +304,11 @@ function makePassword($len)
 		'Zahn', 'Zebra', 'Zirkus', 'Zauber', 'Zelt', 'Zucker', 'Ziege', 'Zange', 'Ziege', 'Ziel'
 	);
 	for ($i = 0; $i < $len; $i++) {
+		$word = $words[rand(0, sizeof($words) - 1)];
+		if (strpos($pwd, $word)) {
+			$i--;
+			continue;
+		}
 		$pwd = $pwd . $words[rand(0, sizeof($words) - 1)];
 	}
 	return $pwd;
@@ -316,4 +334,24 @@ function susExists($personen, $vorname, $nachname)
 		}
 	}
 	return false;
+}
+function generatePassword(int $length = 10): string
+{
+
+
+	$chars[0] = 'abcdefghijklmnopqrstuvwxyz';
+	$chars[1] = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+	$chars[2] = '0123456789';
+	$chars[3] = '!@#$%^&*()_+-={}[]|:;"<>,.?/';
+
+	$password = '';
+
+
+	for ($i = 0; $i < $length; $i++) {
+		$charType = mt_rand(0, 3);
+		$password .= $chars[$charType][array_rand(str_split($chars[$charType]))];
+	}
+
+
+	return $password;
 }
